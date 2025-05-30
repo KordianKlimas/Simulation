@@ -1,7 +1,7 @@
-from Simulation.Characters.Attacks import regular_attack
-from Simulation.Characters.Attacks import fireball
-from Simulation.Characters.Attacks import ice_shard
-from Simulation.Characters.Attacks import non_attack
+from game_enteties.Attacks import regular_attack
+from game_enteties.Attacks import fireball
+from game_enteties.Attacks import ice_shard
+from game_enteties.Attacks import non_attack
 
 class Character:
     def __init__(self, x, y, hp, size,speed, boss, attacks):
@@ -52,7 +52,7 @@ class Character:
         else:
             print("Invalid attack.")
 
-# CreateΩthe player character
+# Create the player character
 player = Character(x=0, y=64, hp=100,size=10, speed=5, boss=0, attacks=[regular_attack])
 
 # Create the boss character

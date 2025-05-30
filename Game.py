@@ -71,4 +71,4 @@ class game:
         self.reward = state_dict.get("score", 0)
         self.done = state_dict.get("done", 0)
         self.current_turn = state_dict.get("turn", 0)
-        return self.state, self.reward, self.done, self.boss_action, self.player_action, self.current_turn
+        return self.state, self.reward, self.done, self.boss_action, self.player_action, self.current_turn,

@@ -11,7 +11,7 @@ class environment:
         self.score = 0
         self.turn = 0
     def resett(self):
-        from Characters.Character import player, boss
+        from game_enteties.Character import player, boss
         self.entities.clear()
         self.attacks.clear()
         self.score = 0
@@ -39,7 +39,7 @@ class environment:
 
     def add_attack(self, attack_id, entity):
         """Add an attack entity to the environment based on the character's current attack."""
-        from Characters.Attacks import Attack
+        from game_enteties.Attacks import Attack
         # Find the attack in the entity's attack list
         for attack in entity.attacks:
             if attack.attack_id == attack_id:
@@ -136,7 +136,8 @@ class environment:
                     else:
                         other_attack.hp -= attack.damage
                     if other_attack.damage >= attack.hp:
-                        self.attacks.remove(attack)
+                        if attack in self.attacks:
+                            self.attacks.remove(attack)
                     else:
                         attack.hp -= other_attack.damage
                         break
@@ -193,6 +194,10 @@ class environment:
             if entity.boss :
                 entity.boss = 1
             else: entity.boss = 0
+
+        # Find player and boss entities for easier access
+        player_entity = next((e for e in entities if e.boss == 0), None)
+        boss_entity = next((e for e in entities if e.boss == 1), None)
         """Encode the state into a structured format for AI processing."""
         state = {
             "entities": [
@@ -206,6 +211,27 @@ class environment:
                  "cooldown": attack.cooldown, "attack_id": attack.attack_id}
                 for attack in (attacks if attacks is not None else [])
             ],
+            "player": {
+                "x": player_entity.x if player_entity else 0,
+                "y": player_entity.y if player_entity else 0,
+                "move": player_entity.move if player_entity else [0, 0],
+                "direction": player_entity.direction if player_entity else [0, 0],
+                "hp": player_entity.hp if player_entity else 0,
+                "attack": player_entity.attack if player_entity else None,
+                "boss": 0,
+                "size": player_entity.size if player_entity else 0,
+                "dodged": False
+            },
+            "boss": {
+                "x": boss_entity.x if boss_entity else 0,
+                "y": boss_entity.y if boss_entity else 0,
+                "move": boss_entity.move if boss_entity else [0, 0],
+                "direction": boss_entity.direction if boss_entity else [0, 0],
+                "hp": boss_entity.hp if boss_entity else 0,
+                "attack": boss_entity.attack if boss_entity else None,
+                "boss": 1,
+                "size": boss_entity.size if boss_entity else 0
+            },
             "score": score,
             "done": done,
             "turn": turn

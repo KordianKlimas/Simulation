@@ -1,8 +1,8 @@
 import tkinter as tk
-from Simulation.Game import game
-from Simulation.Enviroment import environment
-from Simulation.Characters.Character import player, boss
-from Simulation.Characters.Attacks import fireball, ice_shard, regular_attack
+from Game import game
+from Enviroment import environment
+from game_enteties.Character import player, boss
+from game_enteties.Attacks import fireball, ice_shard, regular_attack
 
 class BasicGUI:
     def __init__(self, game_instance):
