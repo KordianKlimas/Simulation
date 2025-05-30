@@ -1,4 +1,5 @@
 import numpy as np
+import json
 
 class gameStatistics:
     def __init__(self, game_state, it_settings):
@@ -32,7 +33,7 @@ class gameStatistics:
         }
         self.logged_data_history[self.current_session_id].append(tick_record)
 
-    def extract_feature_vector(self,current_tick_record, interval_ticks=100, dodge_distance=20):
+    def extract_feature_vector(self, interval_ticks=100, dodge_distance=20):
         """
         Extracts a feature vector from the latest game state for GRU input.
         All values are standardized using self.it_settings.
@@ -45,7 +46,7 @@ class gameStatistics:
 
         current_tick_record = session[-1]
         current_game_state = current_tick_record["data"]
-        print(current_game_state)
+        
         previous_game_state = session[-2]["data"] if len(session) > 1 else None
 
         # --- Apply dodge detection before stats extraction ---
@@ -264,7 +265,7 @@ class gameStatistics:
             time_since_boss_last_took_damage_from_player = ticks - last_boss_damage_tick - 1
         else:
             time_since_boss_last_took_damage_from_player = ticks
-
+        
         return (
             player_hp_change,
             boss_hp_change,
@@ -308,6 +309,132 @@ class gameStatistics:
                             break
 
         current_game_state["player"]["dodged"] = dodged
+
+    def debug_print_state(self):
+        """
+        Prints the current game state with all variable names, values, normalization calculations, and normalized values.
+        Also prints the final feature vector with variable names.
+        """
+        session = self.logged_data_history[self.current_session_id]
+        if not session:
+            print("No state to debug.")
+            return
+
+        current_tick_record = session[-1]
+        current_game_state = current_tick_record["data"]
+        iv = self.it_settings
+
+        print("\n--- DEBUG GAME STATE (JSON) ---")
+        print(json.dumps(current_game_state, indent=2))
+
+        print("\n--- Normalized Values & Calculations ---")
+
+        # Player
+        player = current_game_state.get("player", {})
+        max_player_hp = iv["player"].get("max_hp", 1)
+        player_x_norm = player.get("x", 0) / iv["map_width"]
+        player_y_norm = player.get("y", 0) / iv["map_height"]
+        player_hp_norm = player.get("hp", 0) / max_player_hp
+        player_dir_x = player.get("direction", [0, 0])[0]
+        player_dir_y = player.get("direction", [0, 0])[1]
+        player_is_moving = 1 if player.get("move", [0, 0]) != [0, 0] else 0
+        player_attack_cooldown = player.get("attack_cooldown", 0)
+        max_attack_cooldown = iv["player_attacks"].get("max_attack_cooldown", 1)
+        player_attack_cooldown_norm = player_attack_cooldown / max_attack_cooldown
+
+        print(f"player_x_position: {player.get('x', 0)} / {iv['map_width']} = {player_x_norm}")
+        print(f"player_y_position: {player.get('y', 0)} / {iv['map_height']} = {player_y_norm}")
+        print(f"player_hp_current: {player.get('hp', 0)} / {max_player_hp} = {player_hp_norm}")
+        print(f"player_direction_x: {player_dir_x}")
+        print(f"player_direction_y: {player_dir_y}")
+        print(f"player_is_moving_flag: {player_is_moving}")
+        print(f"player_attack_cooldown_progress: {player_attack_cooldown} / {max_attack_cooldown} = {player_attack_cooldown_norm}")
+
+        # Boss
+        boss = current_game_state.get("boss", {})
+        max_boss_hp = iv["boss"].get("max_hp", 1)
+        boss_x_norm = boss.get("x", 0) / iv["map_width"]
+        boss_y_norm = boss.get("y", 0) / iv["map_height"]
+        boss_hp_norm = boss.get("hp", 0) / max_boss_hp
+        boss_dir_x = boss.get("direction", [0, 0])[0]
+        boss_dir_y = boss.get("direction", [0, 0])[1]
+        boss_is_moving = 1 if boss.get("move", [0, 0]) != [0, 0] else 0
+
+        print(f"boss_x_position: {boss.get('x', 0)} / {iv['map_width']} = {boss_x_norm}")
+        print(f"boss_y_position: {boss.get('y', 0)} / {iv['map_height']} = {boss_y_norm}")
+        print(f"boss_hp_current: {boss.get('hp', 0)} / {max_boss_hp} = {boss_hp_norm}")
+        print(f"boss_direction_x: {boss_dir_x}")
+        print(f"boss_direction_y: {boss_dir_y}")
+        print(f"boss_is_moving_flag: {boss_is_moving}")
+
+        # Projectiles
+        print("\nPlayer Projectiles:")
+        for attack in current_game_state.get("attacks", []):
+            if attack.get("boss", 0) == 0:
+                aid = attack.get("attack_id", 0)
+                max_speed = iv["boss_attacks"].get("max_attack_speed", 1)
+                max_size = iv["boss_attacks"].get("max_attack_size", 1)
+                max_damage = iv["boss_attacks"].get("max_attack_damage", 1)
+                print(f"  id: {aid}, x: {attack.get('x', 0)}, y: {attack.get('y', 0)}, "
+                      f"speed: {attack.get('speed', 0)} / {max_speed} = {attack.get('speed', 0)/max_speed if max_speed else 0}, "
+                      f"size: {attack.get('size', 0)} / {max_size} = {attack.get('size', 0)/max_size if max_size else 0}, "
+                      f"damage: {attack.get('damage', 0)} / {max_damage} = {attack.get('damage', 0)/max_damage if max_damage else 0}")
+
+        print("\nBoss Projectiles:")
+        for attack in current_game_state.get("attacks", []):
+            if attack.get("boss", 0) == 1:
+                aid = attack.get("attack_id", 0)
+                max_speed = iv["boss_attacks"].get("max_attack_speed", 1)
+                max_size = iv["boss_attacks"].get("max_attack_size", 1)
+                max_damage = iv["boss_attacks"].get("max_attack_damage", 1)
+                max_hp = iv["boss_attacks"].get("max_attack_hp", 1)
+                print(f"  id: {aid}, x: {attack.get('x', 0)}, y: {attack.get('y', 0)}, "
+                      f"speed: {attack.get('speed', 0)} / {max_speed} = {attack.get('speed', 0)/max_speed if max_speed else 0}, "
+                      f"size: {attack.get('size', 0)} / {max_size} = {attack.get('size', 0)/max_size if max_size else 0}, "
+                      f"hp: {attack.get('hp', 0)} / {max_hp} = {attack.get('hp', 0)/max_hp if max_hp else 0}, "
+                      f"damage: {attack.get('damage', 0)} / {max_damage} = {attack.get('damage', 0)/max_damage if max_damage else 0}")
+
+        # --- Feature Vector with Names ---
+        print("\n--- Feature Vector ---")
+        # You may want to keep a list of variable names in the same order as your feature vector
+        feature_names = [
+            "player_hp_change",
+            "boss_hp_change",
+            "player_dodge_rate",
+            "boss_attack_frequency",
+            "number_of_attacks_prevented_by_player",
+            "time_since_boss_last_took_damage_from_player",
+            "active_player_projectile_count",
+            "active_boss_projectile_count",
+            "player_x_position",
+            "player_y_position",
+            "player_hp_current",
+            "player_direction_x",
+            "player_direction_y",
+            "player_is_moving_flag",
+            "player_attack_cooldown_progress",
+            "boss_x_position",
+            "boss_y_position",
+            "boss_hp_current",
+            "boss_direction_x",
+            "boss_direction_y",
+            "boss_is_moving_flag",
+            "boss_ability_1_cooldown_progress",
+            "boss_ability_2_cooldown_progress",
+            # ...plus one name per each element in your flattened projectile features...
+        ]
+
+        # Get the actual feature vector
+        feature_vector = self.extract_feature_vector()
+        # Print with names (for the first N features)
+        for i, name in enumerate(feature_names):
+            if i < len(feature_vector):
+                print(f"{name}: {feature_vector[i]}")
+        # Print the rest (projectile features) as a flat list
+        if len(feature_vector) > len(feature_names):
+            print("...projectile features (flattened):", feature_vector[len(feature_names):])
+
+        print("\n--- End Debug ---\n")
 
 # New assumptions:
 # Diffrent boss attacks will be treated 

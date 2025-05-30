@@ -9,7 +9,7 @@ from GameStatistics import gameStatistics
 from game_enteties.Attacks import regular_attack, fireball, ice_shard
 from game_enteties.Character import player, boss
 
-it_settings = {
+it_settings = { 
     "map_width": 1024,
     "map_height": 1024,
     "player": {
@@ -57,7 +57,7 @@ it_settings = {
         "player": player,
         "boss": boss,
     },
-    # For compatibility with GameStatistics
+    # For compatibility with GameStatistics TODO clean up 
     "boss_attacks": {
         "max_player_projectiles": 10,
         "max_boss_projectiles": 10,
@@ -85,26 +85,29 @@ print(game_instance.state)
 gameStats = gameStatistics(game_instance.sDict, it_settings)
 
 # Main loop
+clock = 0
+debug_prints = 0  # Counter for debug prints
+
 while not game_instance.done:
     # Process the game turn and get the new state
     state, reward, done, boss_action, player_action, current_turn = game_instance.process_turn()
-    # Log the game state
+
+    # Log the current tick, gather statistics, extract the feature vector for GRU 
     gameStats.log_game_state(game_instance.sDict)
-    # Get the current tick record and previous tick records for feature extraction
-    current_tick_record = {
-        "session_id": gameStats.current_session_id,
-        "tick": current_turn,
-        "data": game_instance.sDict
-    }
-    # Procsess the current tick record, gather statistics, extract the feature vector for GRU 
-    feature_vector = gameStats.extract_feature_vector(current_tick_record)
+    feature_vector = gameStats.extract_feature_vector()
 
     # Apply AIs
     playerAI.apply_rules()
     bossAI.apply_rules()
+
+    clock += 1  # Increment clock
+
     if game_instance.current_turn % 1000 == 0:  # Example condition to stop the loop
+        if debug_prints < 3:
+           gameStats.debug_print_state()
+           debug_prints += 1
         break
 
-print(game_instance.env.attacks)
-print(f"Player Position: ({playerAI.character.x}, {playerAI.character.y}), Boss Position: ({bossAI.character.x}, {bossAI.character.y})")
-print(f"Player Attack: {playerAI.character.attack}, Boss Attack: {playerAI.character.attack}")
+#print(game_instance.env.attacks)
+#print(f"Player Position: ({playerAI.character.x}, {playerAI.character.y}), Boss Position: ({bossAI.character.x}, {bossAI.character.y})")
+#print(f"Player Attack: {playerAI.character.attack}, Boss Attack: {playerAI.character.attack}")
