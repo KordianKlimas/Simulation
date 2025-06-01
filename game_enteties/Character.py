@@ -35,7 +35,7 @@ class Character:
 
     def take_damage(self, damage):
         """Reduce the character's HP by the damage amount."""
-        self.hp -= damage
+        self.hp = max(0,self.hp-damage)
 
     def create_attack(self, attack):
         """Attack another character."""
